@@ -8,6 +8,8 @@ INSTALL_URL="${OPENCLAW_INSTALL_URL:-${CLAWDBOT_INSTALL_URL:-https://openclaw.bo
 CLI_INSTALL_URL="${OPENCLAW_INSTALL_CLI_URL:-${CLAWDBOT_INSTALL_CLI_URL:-https://openclaw.bot/install-cli.sh}}"
 SKIP_NONROOT="${OPENCLAW_INSTALL_SMOKE_SKIP_NONROOT:-${CLAWDBOT_INSTALL_SMOKE_SKIP_NONROOT:-0}}"
 USE_GUM="${OPENCLAW_USE_GUM:-${CLAWDBOT_USE_GUM:-}}"
+SKIP_SMOKE_IMAGE_BUILD="${OPENCLAW_INSTALL_SMOKE_SKIP_IMAGE_BUILD:-${CLAWDBOT_INSTALL_SMOKE_SKIP_IMAGE_BUILD:-0}}"
+SKIP_NONROOT_IMAGE_BUILD="${OPENCLAW_INSTALL_NONROOT_SKIP_IMAGE_BUILD:-${CLAWDBOT_INSTALL_NONROOT_SKIP_IMAGE_BUILD:-0}}"
 LATEST_DIR="$(mktemp -d)"
 LATEST_FILE="${LATEST_DIR}/latest"
 DOCKER_GUM_ENV=()
@@ -15,11 +17,15 @@ if [[ -n "$USE_GUM" ]]; then
   DOCKER_GUM_ENV=(-e OPENCLAW_USE_GUM="$USE_GUM")
 fi
 
-echo "==> Build smoke image (upgrade, root): $SMOKE_IMAGE"
-docker build \
-  -t "$SMOKE_IMAGE" \
-  -f "$ROOT_DIR/scripts/docker/install-sh-smoke/Dockerfile" \
-  "$ROOT_DIR/scripts/docker/install-sh-smoke"
+if [[ "$SKIP_SMOKE_IMAGE_BUILD" == "1" ]]; then
+  echo "==> Reuse prebuilt smoke image: $SMOKE_IMAGE"
+else
+  echo "==> Build smoke image (upgrade, root): $SMOKE_IMAGE"
+  docker build \
+    -t "$SMOKE_IMAGE" \
+    -f "$ROOT_DIR/scripts/docker/install-sh-smoke/Dockerfile" \
+    "$ROOT_DIR/scripts/docker"
+fi
 
 echo "==> Run installer smoke test (root): $INSTALL_URL"
 docker run --rm -t \
@@ -42,11 +48,15 @@ fi
 if [[ "$SKIP_NONROOT" == "1" ]]; then
   echo "==> Skip non-root installer smoke (OPENCLAW_INSTALL_SMOKE_SKIP_NONROOT=1)"
 else
-  echo "==> Build non-root image: $NONROOT_IMAGE"
-  docker build \
-    -t "$NONROOT_IMAGE" \
-    -f "$ROOT_DIR/scripts/docker/install-sh-nonroot/Dockerfile" \
-    "$ROOT_DIR/scripts/docker/install-sh-nonroot"
+  if [[ "$SKIP_NONROOT_IMAGE_BUILD" == "1" ]]; then
+    echo "==> Reuse prebuilt non-root image: $NONROOT_IMAGE"
+  else
+    echo "==> Build non-root image: $NONROOT_IMAGE"
+    docker build \
+      -t "$NONROOT_IMAGE" \
+      -f "$ROOT_DIR/scripts/docker/install-sh-nonroot/Dockerfile" \
+      "$ROOT_DIR/scripts/docker"
+  fi
 
   echo "==> Run installer non-root test: $INSTALL_URL"
   docker run --rm -t \
