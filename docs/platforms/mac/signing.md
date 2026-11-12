@@ -71,6 +71,8 @@ These budgets pass through the runtime's isolated environment without exposing
 operator credentials or state. The tarball-check budget covers the whole check,
 including extraction and validation.
 
+Runtime packaging also preserves explicit `NODE_EXTRA_CA_CERTS` and `NODE_USE_SYSTEM_CA` settings for package creation and dependency installation. Certificate verification remains enabled; operator configuration and credentials remain excluded from those environments.
+
 The `DISABLE_LIBRARY_VALIDATION=1` development override applies to the app's
 Sparkle workaround, not its private runtime. `OpenClawCloudWorker.app` rejects
 that override entirely; its elevation-host app executables always retain

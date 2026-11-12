@@ -29,8 +29,10 @@ node -e 'const p = require(process.argv[1]); console.error(p.releaseTag ? `Relea
 # Lifecycle hooks must never see operator config, credentials, or state;
 # installer main discovers launchd by UID even with a new HOME.
 # Use the build's pinned pnpm packer, not the host npm's expanding file globs.
-# Forward only its existing phase budgets; the packager owns defaults/validation.
+# Keep explicit TLS trust settings without inheriting operator credentials.
+# The packager owns phase budget defaults and validation.
 TARBALL="$(env -i HOME="$SCRATCH/home" PATH="$PATH" TMPDIR="$SCRATCH" \
+  NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-}" NODE_USE_SYSTEM_CA="${NODE_USE_SYSTEM_CA:-}" \
   OPENCLAW_DOCKER_PACKAGE_INVENTORY_TIMEOUT_MS="${OPENCLAW_DOCKER_PACKAGE_INVENTORY_TIMEOUT_MS:-}" \
   OPENCLAW_DOCKER_PACKAGE_PACK_TIMEOUT_MS="${OPENCLAW_DOCKER_PACKAGE_PACK_TIMEOUT_MS:-}" \
   OPENCLAW_DOCKER_PACKAGE_TARBALL_CHECK_TIMEOUT_MS="${OPENCLAW_DOCKER_PACKAGE_TARBALL_CHECK_TIMEOUT_MS:-}" \
@@ -45,6 +47,7 @@ done
 # per install, even with --force. Lifecycle hooks also load native code, so each
 # installation needs a matching build-time Node executable.
 env -i HOME="$SCRATCH/home" PATH="/usr/bin:/bin:/usr/sbin:/sbin" \
+  NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-}" NODE_USE_SYSTEM_CA="${NODE_USE_SYSTEM_CA:-}" \
   TMPDIR="$SCRATCH" OPENCLAW_INSTALL_CLI_SH_NO_RUN=1 npm_config_os=darwin \
   OPENCLAW_NODE_VERSION="${OPENCLAW_NODE_VERSION:-}" \
   npm_config_omit=dev npm_config_include=optional \

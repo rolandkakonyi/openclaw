@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { rootCertificates } from "node:tls";
 import { afterEach, describe, expect, it as baseIt } from "vitest";
 import { readStandaloneInstaller } from "../../scripts/lib/standalone-installers.mjs";
 import { resolveTestNodeExecPath } from "../../src/test-utils/node-process.js";
@@ -24,11 +25,13 @@ const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
 describe("Mac app runtime publication", () => {
   baseIt.each([undefined])(
-    "preserves the requested build-time installer Node version (%s)",
+    "preserves runtime and TLS options while isolating operator state (%s)",
     (version) => {
       const root = temps.make("openclaw-runtime-version-");
       const scripts = path.join(root, "scripts");
       const bin = path.join(root, "bin");
+      const caFile = path.join(root, "ca.pem");
+      writeFileSync(caFile, rootCertificates.join("\n"));
       mkdirSync(scripts);
       mkdirSync(path.join(scripts, "lib"));
       writeFileSync(
@@ -44,6 +47,12 @@ describe("Mac app runtime publication", () => {
       writeFileSync(
         path.join(scripts, "package-openclaw-for-docker.mjs"),
         `import fs from "node:fs";
+if (process.env.NODE_EXTRA_CA_CERTS !== ${JSON.stringify(caFile)} || process.env.NODE_USE_SYSTEM_CA !== "1") {
+  throw new Error("Runtime packer lost TLS trust configuration");
+}
+if (process.env.OPENCLAW_CONFIG_PATH || process.env.OPENCLAW_GATEWAY_TOKEN) {
+  throw new Error("Runtime packer received operator state");
+}
 const file = process.argv[process.argv.indexOf("--output-dir") + 1] + "/openclaw.tgz";
 fs.writeFileSync(file, "fixture");
 console.log(file);
@@ -55,7 +64,7 @@ console.log(file);
         path.join(scripts, "install-cli.sh"),
         `${readStandaloneInstaller(process.cwd(), "install-cli.sh")}
 install_node() {
-  printf '%s\\n' "$NODE_VERSION" "$DEFAULT_NODE_VERSION" "$NODE_VERSION_REQUESTED" "\${OPENCLAW_CONFIG_PATH:-}" "\${OPENCLAW_GATEWAY_TOKEN:-}"
+  printf '%s\\n' "$NODE_VERSION" "$DEFAULT_NODE_VERSION" "$NODE_VERSION_REQUESTED" "\${OPENCLAW_CONFIG_PATH:-}" "\${OPENCLAW_GATEWAY_TOKEN:-}" "\${NODE_EXTRA_CA_CERTS:-}" "\${NODE_USE_SYSTEM_CA:-}"
   exit 77
 }
 `,
@@ -72,15 +81,20 @@ install_node() {
             ...(version === undefined ? {} : { OPENCLAW_NODE_VERSION: version }),
             OPENCLAW_CONFIG_PATH: "/fixture/operator-config",
             OPENCLAW_GATEWAY_TOKEN: "synthetic-isolation-sentinel",
+            NODE_EXTRA_CA_CERTS: caFile,
+            NODE_USE_SYSTEM_CA: "1",
           },
         },
       );
       expect(result.status, result.stderr).toBe(77);
-      const [selected, defaultVersion, requested, config, token] = result.stdout.split("\n");
+      const [selected, defaultVersion, requested, config, token, ca, systemCa] =
+        result.stdout.split("\n");
       expect(selected).toBe(version || defaultVersion);
       expect(requested).toBe(version ? "1" : "0");
       expect(config).toBe("");
       expect(token).toBe("");
+      expect(ca).toBe(caFile);
+      expect(systemCa).toBe("1");
       expect(existsSync(path.join(root, "runtime"))).toBe(false);
     },
   );
