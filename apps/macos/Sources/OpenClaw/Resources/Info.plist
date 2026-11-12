@@ -69,6 +69,10 @@
     <string>OpenClaw needs Automation permission when an agent action controls another app.</string>
     <key>NSRemindersUsageDescription</key>
     <string>OpenClaw can access Reminders when requested by the agent for the apple-reminders skill.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>OpenClaw can access Calendar when requested by the agent for calendar tasks.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>OpenClaw can read, create, update, and delete calendar events when requested by the agent.</string>
 
     <key>NSAppTransportSecurity</key>
     <dict>

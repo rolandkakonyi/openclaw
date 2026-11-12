@@ -534,6 +534,9 @@ describe.runIf(process.platform === "darwin")("Mac native inventory", () => {
         expect(signs.at(-1)?.args.at(-1)).toBe(fixture.app);
         expect(signs.at(-1)?.entitlements).not.toContain("disable-library-validation");
         expect(signs.at(-1)?.entitlements).not.toContain("allow-jit");
+        expect(
+          signs.at(-1)?.entitlements.includes("com.apple.security.personal-information.calendars"),
+        ).toBe(!elevation);
         for (const [filename, policy] of expected) {
           const signed = expectDefined(
             signs.find(({ args }) => args.at(-1) === filename),
@@ -549,7 +552,12 @@ describe.runIf(process.platform === "darwin")("Mac native inventory", () => {
                   "com.apple.security.cs.allow-jit",
                   "com.apple.security.cs.allow-unsigned-executable-memory",
                   ...(policy === "plugins"
-                    ? ["com.apple.security.cs.disable-library-validation"]
+                    ? [
+                        "com.apple.security.cs.disable-library-validation",
+                        ...(!elevation
+                          ? ["com.apple.security.personal-information.calendars"]
+                          : []),
+                      ]
                     : []),
                 ];
           expect(keys.toSorted(), filename).toEqual(expectedKeys.toSorted());

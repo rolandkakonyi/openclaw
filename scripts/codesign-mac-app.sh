@@ -186,6 +186,8 @@ else
     <true/>
     <key>com.apple.security.personal-information.location</key>
     <true/>
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
 </dict>
 </plist>
 PLIST
@@ -220,6 +222,11 @@ cat > "$ENT_TMP_BUN" <<'PLIST'
   <key>com.apple.security.cs.disable-library-validation</key><true/>
 </dict></plist>
 PLIST
+
+# EventKit helpers are authorized against their responsible host executable.
+if [[ "$SIGNING_VARIANT" == "standard" ]]; then
+  /usr/libexec/PlistBuddy -c 'Add :com.apple.security.personal-information.calendars bool true' "$ENT_TMP_BUN"
+fi
 
 run_bundle_mutation() {
   /usr/bin/python3 "$MUTATION_SCRIPT" "$APP_MUTATION_ROOT" "$ENT_TMP_DIR" "$@"
