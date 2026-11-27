@@ -500,11 +500,15 @@ describe.runIf(process.platform === "darwin")("Mac native inventory", () => {
         const fixture = await makeSigningFixture(mac, mac.createTempDir("openclaw-inventory-jit-"));
         const modules = "lib/node_modules/openclaw/node_modules";
         const sdkRuntime = `node_modules/@anthropic-ai/claude-agent-sdk-darwin-${sdkArch}/claude`;
+        const codexTriple = sdkArch === "arm64" ? "aarch64" : "x86_64";
+        const codexRuntime = `node_modules/@openai/codex-darwin-${sdkArch}/vendor/${codexTriple}-apple-darwin/bin/codex-code-mode-host`;
         const expected = new Map<string, "plugins" | "jit" | "plain">();
         for (const [relative, fileType, policy] of [
           ["bin/bun", 2, "plugins"],
           [`lib/node_modules/openclaw/${sdkRuntime}`, 2, "jit"],
           [`${modules}/nested/${sdkRuntime}`, 2, "jit"],
+          [`lib/node_modules/openclaw/${codexRuntime}`, 2, "jit"],
+          [`${modules}/nested/${codexRuntime}`, 2, "jit"],
           [
             `${modules}/@lydell/node-pty-darwin-${sdkArch}/prebuilds/darwin-${sdkArch}/spawn-helper`,
             2,
@@ -512,7 +516,9 @@ describe.runIf(process.platform === "darwin")("Mac native inventory", () => {
           ],
           [`${modules}/other/bin/bun`, 2, "plain"],
           [`${modules}/other/claude`, 2, "plain"],
+          [`${modules}/other/codex-code-mode-host`, 2, "plain"],
           [`${modules}/library/${sdkRuntime}`, 6, "plain"],
+          [`${modules}/library/${codexRuntime}`, 6, "plain"],
           ["lib/addon.node", 6, "plain"],
           ["lib/libsqlite3.dylib", 6, "plain"],
         ] as const) {
